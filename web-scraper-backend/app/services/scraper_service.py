@@ -1,42 +1,45 @@
-import requests
-from bs4 import BeautifulSoup
-from typing import List, Dict
-import uuid
+from typing import Dict
 import logging
-from collections import Counter
-import re
+from bs4 import BeautifulSoup
+import requests
 from .aws_service import AWSService
+from .intelligent_classifier import IntelligentClassifier
 
 logger = logging.getLogger(__name__)
 
 class ScraperService:
     def __init__(self):
         self.aws_service = AWSService()
+        self.classifier = IntelligentClassifier()
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
 
-    def scrape_and_generate_questions(self, url: str) -> List[Dict]:
+    def process_content(self, url: str, previous_answers: Dict[str, str] = None) -> Dict:
         """
-        Scrapes website content and generates relevant questions based on the content
+        Process website content and generate either questions or recommendations
         """
         try:
-            # Fetch and parse content
+            # Fetch content
             content = self._fetch_content(url)
-            analysis = self._analyze_content(content)
             
-            # Generate questions based on the analyzed content
-            questions = self._generate_questions(analysis)
-            
-            return questions
-            
+            if not previous_answers:
+                # First visit: Generate initial question
+                return self._generate_initial_question(content)
+            else:
+                # Subsequent visit: Process answers and generate recommendations
+                return self._generate_recommendations(content, previous_answers)
+                
         except Exception as e:
-            logger.error(f"Error in scrape_and_generate_questions: {str(e)}")
-            raise
+            logger.error(f"Error processing content: {str(e)}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
 
     def _fetch_content(self, url: str) -> Dict:
         """
-        Fetches and extracts relevant content from the website
+        Fetch and parse website content
         """
         try:
             response = requests.get(url, headers=self.headers, timeout=10)
@@ -44,96 +47,95 @@ class ScraperService:
             
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            return {
+            # Extract relevant content
+            content = {
                 'title': soup.title.string if soup.title else '',
-                'meta_description': soup.find('meta', {'name': 'description'})['content'] if soup.find('meta', {'name': 'description'}) else '',
-                'headings': [h.text.strip() for h in soup.find_all(['h1', 'h2', 'h3'])],
-                'paragraphs': [p.text.strip() for p in soup.find_all('p')],
-                'links': [a.text.strip() for a in soup.find_all('a') if a.text.strip()],
+                'meta_description': soup.find('meta', {'name': 'description'})['content'] 
+                    if soup.find('meta', {'name': 'description'}) else '',
+                'headings': [h.get_text().strip() for h in soup.find_all(['h1', 'h2', 'h3'])],
+                'paragraphs': [p.get_text().strip() for p in soup.find_all('p')],
+                'links': [a.get('href') for a in soup.find_all('a') if a.get('href')],
+                'url': url
             }
+            
+            return content
             
         except requests.RequestException as e:
             logger.error(f"Error fetching URL {url}: {str(e)}")
-            raise Exception(f"Failed to fetch website content: {str(e)}")
+            raise Exception(f"Failed to fetch URL: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error parsing content from {url}: {str(e)}")
+            raise Exception(f"Failed to parse content: {str(e)}")
 
-    def _analyze_content(self, content: Dict) -> Dict:
+    def _generate_initial_question(self, content: Dict) -> Dict:
         """
-        Analyzes the content using AWS Comprehend
+        Generate initial question for the user
         """
-        # Combine relevant text
-        text_to_analyze = ' '.join([
-            content['title'],
-            content['meta_description'],
-            *content['headings'][:5],  # First 5 headings
-            *content['paragraphs'][:3]  # First 3 paragraphs
-        ])
+        try:
+            question_data = self.classifier.generate_smart_question(content)
+            return {
+                'status': 'success',
+                'question': question_data['question'],
+                'options': question_data['options'],
+                'metadata': {
+                    'category_mapping': question_data['category_mapping'],
+                    'confidence': question_data.get('confidence', 0.8)
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error generating initial question: {str(e)}")
+            return {
+                'status': 'error',
+                'message': 'Failed to generate question'
+            }
 
-        # Truncate to 5000 bytes (AWS Comprehend limit)
-        text_to_analyze = text_to_analyze[:5000]
+    def _generate_recommendations(self, content: Dict, previous_answers: Dict[str, str]) -> Dict:
+        """
+        Generate recommendations based on user's answers
+        """
+        try:
+            # Get AWS analysis for the content
+            text_for_analysis = self._prepare_text_for_analysis(content)
+            aws_analysis = self.aws_service.analyze_text(text_for_analysis)
+            
+            # Generate recommendations using the intelligent classifier
+            recommendations = self.classifier.generate_recommendations(
+                content, 
+                previous_answers, 
+                aws_analysis
+            )
+            
+            return {
+                'status': 'success',
+                'recommendations': recommendations['recommendations'],
+                'metadata': {
+                    'primary_intent': recommendations['primary_intent'],
+                    'confidence': recommendations.get('confidence', 0.8)
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error generating recommendations: {str(e)}")
+            return {
+                'status': 'error',
+                'message': 'Failed to generate recommendations'
+            }
 
-        # Get AWS analysis
-        analysis = self.aws_service.analyze_text(text_to_analyze)
-
-        # Extract key topics from analysis
-        topics = []
+    def _prepare_text_for_analysis(self, content: Dict) -> str:
+        """
+        Prepare content text for AWS analysis
+        """
+        text_parts = []
         
-        # Add entities of type ORGANIZATION, PERSON, EVENT
-        for entity in analysis['entities']:
-            if entity['Type'] in ['ORGANIZATION', 'PERSON', 'EVENT']:
-                topics.append({
-                    'text': entity['Text'],
-                    'type': entity['Type'],
-                    'score': entity['Score']
-                })
-
-        # Add key phrases with high scores
-        for phrase in analysis['key_phrases']:
-            if phrase['Score'] > 0.8:
-                topics.append({
-                    'text': phrase['Text'],
-                    'type': 'KEY_PHRASE',
-                    'score': phrase['Score']
-                })
-
-        return {
-            'topics': topics,
-            'sentiment': analysis['sentiment'],
-            'sentiment_scores': analysis['sentiment_scores']
-        }
-
-    def _generate_questions(self, analysis: Dict) -> List[Dict]:
-        """
-        Generates questions based on AWS Comprehend analysis
-        """
-        questions = []
-
-        # Add sentiment-based question
-        sentiment = analysis['sentiment'].lower()
-        questions.append({
-            'id': str(uuid.uuid4()),
-            'text': f"This content appears to be {sentiment}. Do you agree?",
-            'options': ['Strongly Agree', 'Agree', 'Neutral', 'Disagree', 'Strongly Disagree']
-        })
-
-        # Add topic-based questions
-        for topic in analysis['topics'][:3]:  # Top 3 topics
-            if topic['type'] == 'ORGANIZATION':
-                questions.append({
-                    'id': str(uuid.uuid4()),
-                    'text': f"How familiar are you with {topic['text']}?",
-                    'options': ['Very Familiar', 'Somewhat Familiar', 'Not Familiar']
-                })
-            elif topic['type'] == 'EVENT':
-                questions.append({
-                    'id': str(uuid.uuid4()),
-                    'text': f"Are you interested in {topic['text']}?",
-                    'options': ['Very Interested', 'Somewhat Interested', 'Not Interested']
-                })
-            else:
-                questions.append({
-                    'id': str(uuid.uuid4()),
-                    'text': f"How relevant is {topic['text']} to your interests?",
-                    'options': ['Very Relevant', 'Somewhat Relevant', 'Not Relevant']
-                })
-
-        return questions 
+        if content.get('title'):
+            text_parts.append(content['title'])
+            
+        if content.get('meta_description'):
+            text_parts.append(content['meta_description'])
+            
+        if content.get('headings'):
+            text_parts.extend(content['headings'][:5])
+            
+        if content.get('paragraphs'):
+            text_parts.extend(content['paragraphs'][:3])
+            
+        return ' '.join(filter(None, text_parts))[:5000]  # AWS Comprehend limit
