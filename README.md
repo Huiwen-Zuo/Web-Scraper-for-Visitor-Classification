@@ -1,46 +1,84 @@
-# Getting Started with Create React App
+# Web Scraper for Visitor Classification - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is the frontend component of a web scraping and visitor classification system built with React, TypeScript, and Redux.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- URL input for website scraping
+- Dynamic question generation based on website content
+- User response collection
+- Visitor classification based on responses
+- Real-time feedback and error handling
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- React 18
+- TypeScript
+- Redux Toolkit
+- Styled Components
+- Axios
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Project Structure
+web-scraper-frontend/
+├── src/
+│ ├── components/
+│ │ ├── common/
+│ │ │ ├── ErrorMessage.tsx
+│ │ │ └── LoadingSpinner.tsx
+│ │ └── features/
+│ │ ├── UrlInput.tsx
+│ │ ├── QuestionDisplay.tsx
+│ │ └── AnswerSection.tsx
+│ ├── store/
+│ │ ├── slices/
+│ │ │ └── scraperSlice.ts
+│ │ └── index.ts
+│ ├── services/
+│ │ └── api.ts
+│ ├── styles/
+│ │ └── GlobalStyles.ts
+│ └── App.tsx
 
-### `npm test`
+## Development Progress
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Completed
+- ✅ Frontend project setup with React and TypeScript
+- ✅ Redux store configuration
+- ✅ Basic component structure
+- ✅ API service layer
 
-### `npm run build`
+### In Progress
+- 🔄 Backend development with Flask
+- 🔄 AWS infrastructure setup
+- 🔄 Integration testing
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### TODO
+- ⭕ Implement web scraping logic
+- ⭕ Add AWS Comprehend integration
+- ⭕ Enhance UI/UX design
+- ⭕ Add user authentication
+- ⭕ Implement caching mechanism
+- ⭕ Add analytics dashboard
+- ⭕ Write comprehensive tests
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Technical Implementation Details
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Frontend Architecture
+The frontend is built with a focus on maintainability and scalability:
+- **Component Structure**: Organized into feature-based and common components
+- **State Management**: Centralized Redux store with async thunks for API calls
+- **Type Safety**: Comprehensive TypeScript implementation
+- **Styling**: Modular styled-components with global theming
 
-### `npm run eject`
+### API Integration
+- RESTful API communication using Axios
+- Type-safe API responses
+- Error handling and loading states
+- Response caching (planned)
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Next Steps
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+The immediate focus is on developing the backend infrastructure and implementing the core web scraping functionality. This will be followed by AWS service integration and enhanced frontend features.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+## License
+This project is licensed under the MIT License.
