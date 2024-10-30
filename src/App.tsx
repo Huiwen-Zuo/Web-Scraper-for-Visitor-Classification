@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { store } from './store';
 import styled from 'styled-components';
 import UrlInput from './components/features/UrlInput';
+import QuestionDisplay from './components/features/QuestionDisplay';
 
 const AppContainer = styled.div`
   max-width: 1200px;
@@ -10,12 +11,19 @@ const AppContainer = styled.div`
   padding: 20px;
 `;
 
+const Title = styled.h1`
+  color: #333;
+  text-align: center;
+  margin-bottom: 30px;
+`;
+
 function App() {
   return (
     <Provider store={store}>
       <AppContainer>
-        <h1>Web Scraper for Visitor Classification</h1>
+        <Title>Web Scraper for Visitor Classification</Title>
         <UrlInput />
+        <QuestionDisplay />
       </AppContainer>
     </Provider>
   );
