@@ -5,13 +5,15 @@ import uuid
 import logging
 from collections import Counter
 import re
+from .aws_service import AWSService
 
 logger = logging.getLogger(__name__)
 
 class ScraperService:
     def __init__(self):
+        self.aws_service = AWSService()
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
 
     def scrape_and_generate_questions(self, url: str) -> List[Dict]:
@@ -21,10 +23,10 @@ class ScraperService:
         try:
             # Fetch and parse content
             content = self._fetch_content(url)
-            topics = self._analyze_content(content)
+            analysis = self._analyze_content(content)
             
             # Generate questions based on the analyzed content
-            questions = self._generate_questions(topics)
+            questions = self._generate_questions(analysis)
             
             return questions
             
@@ -54,60 +56,84 @@ class ScraperService:
             logger.error(f"Error fetching URL {url}: {str(e)}")
             raise Exception(f"Failed to fetch website content: {str(e)}")
 
-    def _analyze_content(self, content: Dict) -> List[str]:
+    def _analyze_content(self, content: Dict) -> Dict:
         """
-        Analyzes the content to identify main topics and themes
+        Analyzes the content using AWS Comprehend
         """
-        # Combine all text content
-        all_text = ' '.join([
+        # Combine relevant text
+        text_to_analyze = ' '.join([
             content['title'],
             content['meta_description'],
-            *content['headings'],
-            *content['paragraphs']
-        ]).lower()
+            *content['headings'][:5],  # First 5 headings
+            *content['paragraphs'][:3]  # First 3 paragraphs
+        ])
 
-        # Remove common words and special characters
-        common_words = {'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at'}
-        words = re.findall(r'\w+', all_text)
-        meaningful_words = [word for word in words if word not in common_words and len(word) > 3]
+        # Truncate to 5000 bytes (AWS Comprehend limit)
+        text_to_analyze = text_to_analyze[:5000]
 
-        # Get most common topics
-        word_freq = Counter(meaningful_words)
-        return [word for word, _ in word_freq.most_common(5)]
+        # Get AWS analysis
+        analysis = self.aws_service.analyze_text(text_to_analyze)
 
-    def _generate_questions(self, topics: List[str]) -> List[Dict]:
+        # Extract key topics from analysis
+        topics = []
+        
+        # Add entities of type ORGANIZATION, PERSON, EVENT
+        for entity in analysis['entities']:
+            if entity['Type'] in ['ORGANIZATION', 'PERSON', 'EVENT']:
+                topics.append({
+                    'text': entity['Text'],
+                    'type': entity['Type'],
+                    'score': entity['Score']
+                })
+
+        # Add key phrases with high scores
+        for phrase in analysis['key_phrases']:
+            if phrase['Score'] > 0.8:
+                topics.append({
+                    'text': phrase['Text'],
+                    'type': 'KEY_PHRASE',
+                    'score': phrase['Score']
+                })
+
+        return {
+            'topics': topics,
+            'sentiment': analysis['sentiment'],
+            'sentiment_scores': analysis['sentiment_scores']
+        }
+
+    def _generate_questions(self, analysis: Dict) -> List[Dict]:
         """
-        Generates questions based on identified topics
+        Generates questions based on AWS Comprehend analysis
         """
-        question_templates = [
-            {
-                'text': "How interested are you in {}?",
-                'options': ['Very Interested', 'Somewhat Interested', 'Not Interested']
-            },
-            {
-                'text': "How often do you engage with content about {}?",
-                'options': ['Daily', 'Weekly', 'Monthly', 'Rarely']
-            },
-            {
-                'text': "What's your experience level with {}?",
-                'options': ['Expert', 'Intermediate', 'Beginner', 'No Experience']
-            }
-        ]
-
         questions = []
-        for topic in topics[:3]:  # Limit to top 3 topics
-            template = question_templates[len(questions) % len(question_templates)]
-            questions.append({
-                'id': str(uuid.uuid4()),
-                'text': template['text'].format(topic.title()),
-                'options': template['options']
-            })
 
-        # Add one general question
+        # Add sentiment-based question
+        sentiment = analysis['sentiment'].lower()
         questions.append({
             'id': str(uuid.uuid4()),
-            'text': 'What is your primary purpose for visiting this website?',
-            'options': ['Learning', 'Research', 'Business', 'Entertainment']
+            'text': f"This content appears to be {sentiment}. Do you agree?",
+            'options': ['Strongly Agree', 'Agree', 'Neutral', 'Disagree', 'Strongly Disagree']
         })
+
+        # Add topic-based questions
+        for topic in analysis['topics'][:3]:  # Top 3 topics
+            if topic['type'] == 'ORGANIZATION':
+                questions.append({
+                    'id': str(uuid.uuid4()),
+                    'text': f"How familiar are you with {topic['text']}?",
+                    'options': ['Very Familiar', 'Somewhat Familiar', 'Not Familiar']
+                })
+            elif topic['type'] == 'EVENT':
+                questions.append({
+                    'id': str(uuid.uuid4()),
+                    'text': f"Are you interested in {topic['text']}?",
+                    'options': ['Very Interested', 'Somewhat Interested', 'Not Interested']
+                })
+            else:
+                questions.append({
+                    'id': str(uuid.uuid4()),
+                    'text': f"How relevant is {topic['text']} to your interests?",
+                    'options': ['Very Relevant', 'Somewhat Relevant', 'Not Relevant']
+                })
 
         return questions 
