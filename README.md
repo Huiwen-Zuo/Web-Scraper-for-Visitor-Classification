@@ -1,43 +1,36 @@
-# Web Scraper for Visitor Classification - Frontend
+# Web Scraper for Visitor Classification
 
-This project is the frontend component of a web scraping and visitor classification system built with React, TypeScript, and Redux.
+A full-stack web application that analyzes websites and generates dynamic visitor classification questionnaires using modern web technologies and AWS services.
 
-## Features
+## Project Overview
 
-- URL input for website scraping
-- Dynamic question generation based on website content
-- User response collection
-- Visitor classification based on responses
-- Real-time feedback and error handling
+This application enables dynamic visitor profiling by:
+- Analyzing website content through web scraping
+- Generating relevant questions based on content analysis
+- Classifying visitors based on their responses
+- Providing insights about visitor interests and demographics
 
 ## Tech Stack
 
-- React 18
-- TypeScript
-- Redux Toolkit
-- Styled Components
-- Axios
+### Frontend (`/web-scraper-frontend`)
+- **Core**: React 18, TypeScript
+- **State Management**: Redux Toolkit
+- **Styling**: Styled Components
+- **API Communication**: Axios
 
-## Project Structure
-web-scraper-frontend/
-├── src/
-│ ├── components/
-│ │ ├── common/
-│ │ │ ├── ErrorMessage.tsx
-│ │ │ └── LoadingSpinner.tsx
-│ │ └── features/
-│ │ ├── UrlInput.tsx
-│ │ ├── QuestionDisplay.tsx
-│ │ └── AnswerSection.tsx
-│ ├── store/
-│ │ ├── slices/
-│ │ │ └── scraperSlice.ts
-│ │ └── index.ts
-│ ├── services/
-│ │ └── api.ts
-│ ├── styles/
-│ │ └── GlobalStyles.ts
-│ └── App.tsx
+### Backend (`/web-scraper-backend`)
+- **Core**: Python, Flask
+- **Web Scraping**: BeautifulSoup4
+- **Data Validation**: Marshmallow
+- **Cloud Services**: AWS (Comprehend, DynamoDB)
+
+## Features
+
+- **URL Analysis**: Extract meaningful content from any website
+- **Dynamic Question Generation**: Create relevant questions based on website content
+- **Visitor Classification**: Analyze responses to classify visitors
+- **Real-time Processing**: Immediate feedback and classification results
+- **Error Handling**: Robust error management for both frontend and backend
 
 ## Development Progress
 
@@ -45,40 +38,39 @@ web-scraper-frontend/
 - ✅ Frontend project setup with React and TypeScript
 - ✅ Redux store configuration
 - ✅ Basic component structure
-- ✅ API service layer
+- ✅ Backend structure with Flask
+- ✅ API service layer setup
 
 ### In Progress
-- 🔄 Backend development with Flask
-- 🔄 AWS infrastructure setup
-- 🔄 Integration testing
+- 🔄 Web scraping implementation
+- 🔄 Question generation logic
+- 🔄 Visitor classification algorithm
 
-### TODO
-- ⭕ Implement web scraping logic
-- ⭕ Add AWS Comprehend integration
-- ⭕ Enhance UI/UX design
-- ⭕ Add user authentication
-- ⭕ Implement caching mechanism
-- ⭕ Add analytics dashboard
-- ⭕ Write comprehensive tests
+### Planned
+- ⭕ AWS services integration
+- ⭕ Enhanced error handling
+- ⭕ UI/UX improvements
+- ⭕ Performance optimization
+- ⭕ Testing suite
+- ⭕ Analytics dashboard
 
-## Technical Implementation Details
+## Architecture
 
-### Frontend Architecture
-The frontend is built with a focus on maintainability and scalability:
-- **Component Structure**: Organized into feature-based and common components
-- **State Management**: Centralized Redux store with async thunks for API calls
-- **Type Safety**: Comprehensive TypeScript implementation
-- **Styling**: Modular styled-components with global theming
-
-### API Integration
-- RESTful API communication using Axios
-- Type-safe API responses
-- Error handling and loading states
-- Response caching (planned)
+The application follows a microservices architecture:
+- Frontend communicates with backend via RESTful APIs
+- Backend processes requests and interacts with AWS services
+- Data flow is managed through Redux on the frontend
+- Modular component structure for scalability
 
 ## Next Steps
 
-The immediate focus is on developing the backend infrastructure and implementing the core web scraping functionality. This will be followed by AWS service integration and enhanced frontend features.
+1. Implement core web scraping functionality
+2. Develop question generation algorithm
+3. Integrate AWS Comprehend for text analysis
+4. Add comprehensive testing
+5. Enhance UI/UX design
+6. Implement caching and performance optimizations
 
 ## License
+
 This project is licensed under the MIT License.
