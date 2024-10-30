@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { apiService } from '../../services/api';
+import { api } from '../../services/api';
 
 export interface Question {
   id: string;
@@ -11,8 +11,8 @@ interface ScraperState {
   url: string;
   loading: boolean;
   questions: Question[];
-  error: string | null;
   answers: Record<string, string>;
+  error: string | null;
   classification: string | null;
   confidence: number | null;
 }
@@ -21,8 +21,8 @@ const initialState: ScraperState = {
   url: '',
   loading: false,
   questions: [],
-  error: null,
   answers: {},
+  error: null,
   classification: null,
   confidence: null,
 };
@@ -31,7 +31,7 @@ const initialState: ScraperState = {
 export const scrapeWebsite = createAsyncThunk(
   'scraper/scrapeWebsite',
   async (url: string) => {
-    const response = await apiService.scrapeWebsite(url);
+    const response = await api.scrapeWebsite(url);
     return response;
   }
 );
@@ -39,7 +39,7 @@ export const scrapeWebsite = createAsyncThunk(
 export const submitAnswers = createAsyncThunk(
   'scraper/submitAnswers',
   async ({ url, answers }: { url: string; answers: Record<string, string> }) => {
-    const response = await apiService.submitAnswers(url, answers);
+    const response = await api.submitAnswers(url, answers);
     return response;
   }
 );
@@ -64,6 +64,7 @@ const scraperSlice = createSlice({
       .addCase(scrapeWebsite.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.questions = [];
       })
       .addCase(scrapeWebsite.fulfilled, (state, action) => {
         state.loading = false;
@@ -91,4 +92,4 @@ const scraperSlice = createSlice({
 });
 
 export const { setUrl, setAnswer, resetState } = scraperSlice.actions;
-export default scraperSlice.reducer;
+export default scraperSlice.reducer; 

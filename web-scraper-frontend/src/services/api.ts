@@ -1,57 +1,45 @@
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import { Question } from '../store/slices/scraperSlice';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
-export const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Response types
 interface ScrapeResponse {
   questions: Question[];
-  websiteInfo?: {
-    title: string;
-    description: string;
-  };
 }
 
-interface SubmitAnswersResponse {
+interface ClassificationResponse {
   classification: string;
   confidence: number;
 }
 
-// API methods
-export const apiService = {
-  // Scrape website and get questions
+export const api = {
   scrapeWebsite: async (url: string): Promise<ScrapeResponse> => {
     try {
-      const response: AxiosResponse<ScrapeResponse> = await api.post('/scrape', { url });
+      const response = await axios.post(`${API_BASE_URL}/scrape`, { url });
       return response.data;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to scrape website');
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.error || 'Failed to scrape website');
+      }
+      throw new Error('Failed to connect to the server');
     }
   },
 
-  // Submit user's answers and get classification
   submitAnswers: async (
-    url: string,
+    url: string, 
     answers: Record<string, string>
-  ): Promise<SubmitAnswersResponse> => {
+  ): Promise<ClassificationResponse> => {
     try {
-      const response: AxiosResponse<SubmitAnswersResponse> = await api.post('/classify', {
-        url,
-        answers,
+      const response = await axios.post(`${API_BASE_URL}/classify`, { 
+        url, 
+        answers 
       });
       return response.data;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to submit answers');
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(error.response.data.error || 'Failed to submit answers');
+      }
+      throw new Error('Failed to connect to the server');
     }
-  },
-};
-
-// If there are no other exports, you can add:
-export {};
+  }
+}; 
