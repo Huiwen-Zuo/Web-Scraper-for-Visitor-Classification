@@ -20,11 +20,12 @@ def create_lambda_layer():
         os.makedirs(python_dir)
         logger.info(f"Created layer directory: {python_dir}")
         
-        # Simplified requirements list
+        # Updated requirements list
         requirements = [
             'beautifulsoup4==4.9.3',
             'requests==2.26.0',
-            'boto3==1.26.137'
+            'boto3==1.26.137',
+            'lxml==4.9.3'  # Added for better HTML parsing
         ]
         
         # Install requirements

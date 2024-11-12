@@ -13,21 +13,53 @@ def create_lambda_function():
 import json
 import requests
 from bs4 import BeautifulSoup
-import boto3
-import os
+import re
+from collections import Counter
+
+def extract_main_topics(soup):
+    """Extract main topics from navigation and headers"""
+    topics = []
+    
+    # Get navigation items
+    nav_items = soup.find_all(['nav', 'header'])
+    for nav in nav_items:
+        links = nav.find_all('a')
+        topics.extend([link.text.strip() for link in links if link.text.strip()])
+    
+    # Get main headers
+    headers = soup.find_all(['h1', 'h2', 'h3'])
+    topics.extend([h.text.strip() for h in headers if h.text.strip()])
+    
+    # Clean and count topics
+    cleaned_topics = [t for t in topics if len(t) > 2 and len(t) < 30]
+    topic_counter = Counter(cleaned_topics)
+    
+    # Get top 4 most common topics
+    main_topics = [topic for topic, _ in topic_counter.most_common(4)]
+    return main_topics[:4]  # Ensure we have max 4 options
 
 def scrape_website(url):
     try:
-        response = requests.get(url)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Extract text content
-        text_content = soup.get_text()
+        # Get page title
         title = soup.title.string if soup.title else ""
+        
+        # Extract main topics
+        topics = extract_main_topics(soup)
+        
+        # If we couldn't find enough topics, add a generic option
+        while len(topics) < 4:
+            topics.append("General Information")
         
         return {
             "title": title,
-            "content": text_content[:1000]  # First 1000 chars for testing
+            "question": "Which aspect of this website interests you most?",
+            "options": topics
         }
     except Exception as e:
         return {"error": str(e)}
